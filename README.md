@@ -42,7 +42,14 @@
 <!-- Your community, and what your classifier sorts posts into. Three or four
      sentences. -->
 
+**Community:** r/LocalLLaMA (public subreddit about running AI models locally).
 
+**Milestone 1: candidate distinctions from reading 30 posts**
+
+1. Some posts use checkable facts to support the poster's own conclusion. Many claim "state-of-the-art" or "outperforms X" with no scores.
+2. Some posts ask readers for something (help, a recommendation). Others give something (a release, results, a guide).
+3. Some posts are in the poster's own voice ("I tested", "I built"). Others pass along someone else's words (copied model cards, paper abstracts).
+4. Posts backed by results often admit their limits. Claims-only posts never do.
 
 ---
 
