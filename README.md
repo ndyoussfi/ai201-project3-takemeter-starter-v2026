@@ -61,35 +61,51 @@
      The decision rule is worth a point on its own and it's the thing most
      people leave out. Every taxonomy has a hardest boundary. Name yours. -->
 
-### `label_one`
+### `announcement`
 
-**Definition:**
-
-**Example 1:**
->
-
-**Example 2:**
->
-
-### `label_two`
-
-**Definition:**
+**Definition:** Presents a new model, tool, paper or project, the poster's own or someone else's, without the poster making their own argument backed by checkable facts.
 
 **Example 1:**
->
+> **Phonon is now open-source, 31M and 40M TTS models designed to run on the edge**
+> At Gradium we just made our first open-source model release with Phonon, a collection of small Text-to-Speech models designed to run on device. The inference stack is fully open-source and targets 10+ different backends (CPUs, GPUs, NPUs), most of them in Rust. We hope that the community will build lots of different things on tops of our models and code, any feedback is very welcome and we're looking forward to many more open-source releases!
 
 **Example 2:**
->
+> **ornith-ai/Ornith-1.5-122B (Qwen finetune)**
+> from Ornith: Chirp Chirp! 🐦 We are introducing Ornith-1.5, a major step toward building foundation models through end-to-end self-improvement. [...] Rather than relying on a fixed set of human-curated tasks and manually designed harnesses, Ornith-1.5 continuously generates new training tasks, discovers effective strategies for solving them, and improves the policy through reinforcement learning.
+
+### `results`
+
+**Definition:** The poster uses specific, checkable facts (their own measurements or figures they collected) to support their own conclusion or comparison
+
+**Example 1:**
+> **3M token pool for Nemotron 3.5 Super on a single RTX PRO 6000**
+> While benchmark figures are lagging behind Qwen3.8-Flash-Next, Nemotron 3.5 Super does not use any system memory (no 50GB lookup table), is slightly faster (150 to 250 tps tg vs 130 to 230 tps for 3.8 FN) and, most importantly, the tokens, as Qwen3.8 FN only allows for a ~450k token pool.
+
+**Example 2:**
+> **Qwen3.8-Flash-Next vs Opus 5.5: Six-way benchmark on a real Rust feature with Claude Code and Pi**
+> Opus wrote better code, 82% on average against 68% for Claude Code + Flash-Next and 66% for Pi + Flash-Next. [...] Flash-Next took 1.1x to 2.1x as long as Opus at the same effort. [...] Opus is still ahead, but Flash-Next was right behind, on my laptop, for the cost of electricity.
+
+### `help`
+
+**Definition:** Asks readers to solve the poster's problem or recommend something, even when the post includes specs, numbers or frustration.
+
+**Example 1:**
+> **Pi.dev harness bugs**
+> Anyone know a fix for some issues? [...] when running context % isn't always accurate it'll change from a big % to somewhat lower later (example it'll go from 78% to randomly 56%). [...] Any help with this would be amazing!
+
+**Example 2:**
+> **Meaningful to add another 16 gig GPU or go hybrid (single GPU) + cloud**
+> I have a 5070 ti and a 5060 ti 16 gigs, and 48 gigs of DDR5 ram. [...] I'm just curious if it would be worth it to keep the 5060 ti instead of selling it, and use this dual GPU setup and rely on the cloud rarely, if at all. [...] would greatly appreciate some general advice as to what would be a reasonable way forward.
 
 ### The hardest boundary
 
-**Which two labels:**
+**Which two labels:** `announcement` and `results`
 
 **The decision rule I used every time:**
 <!-- e.g. "If the post names a specific checkable fact, it's `analysis`, even
      if the tone is heated." -->
 
-
+If the post announces something new but the poster uses specific, checkable facts to support a conclusion of their own, label it `results`, even when it's their own project. Kokon 0.10 is `results`: "about 2 s per image on an RTX 5070 Ti" and "I tested the popular 2.1 LoRAs... they don't beat what Turbo does" support the poster's own conclusions. If the numbers are only specs (parameter counts, context size), are copied without an argument from the poster (paper abstracts), or don't support the headline claim, label it `announcement`. Muse Spark Open is `announcement`: its kernel speedups don't back "the most capable US open-weight model."
 
 ---
 

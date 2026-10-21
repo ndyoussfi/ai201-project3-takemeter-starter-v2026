@@ -5,6 +5,6 @@
 #
 # Delete the examples below and put yours in.
 
-analysis: makes an argument backed by a specific, checkable fact
-hot_take: a confident claim with no support offered
-reaction: an immediate response to something that just happened
+announcement: Presents a new model, tool, paper or project, the poster's own or someone else's, without the poster making their own argument backed by checkable facts.
+results: The poster uses specific, checkable facts (their own measurements or figures they collected) to support their own conclusion or comparison.
+help: Asks readers to solve the poster's problem or recommend something, even when the post includes specs, numbers or frustration.
