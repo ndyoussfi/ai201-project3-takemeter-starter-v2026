@@ -54,10 +54,10 @@ whether you hit them:
 ## 1.
 
 <!-- Your criterion. It must name a number. -->
+Overall accuracy on the held-out test set is at least 0.8 on every one of the three seeds.
 
 
-
-**Why this target:**
+**Why this target:** The posts carry important measurable facts and more than 2 out of 10 mistakes makes it untrustworthy. Since about 61% of the 30 posts are announcements, always guessing announcement scores about 0.61, so 0.8 means the model also has to get about 6 of the 12 results and help posts in the test set right.
 
 
 
@@ -66,11 +66,11 @@ whether you hit them:
 ## 2.
 
 <!-- Your criterion. -->
+Recall for `results` on the held-out test set is at least 0.75 on every one of the three seeds.
 
 
-
-**Why this target:**
-
+**Why this target:** I'm using TakeMeter to filter results posts, so a `results` post the model misses is one I don't see.
+Only about 7–8 `results` posts hit the test split, and each one moves recall by about 0.13, so 0.75 allows about 1–2 misses whether a seed gets 7 or 8. I expect those misses to be posts like the Kokon 0.10 post, because it looks like an `announcement` post for a new version of Kokon and lists new features, but includes real measurements, which make it a `results` post.
 
 
 ---
@@ -78,23 +78,20 @@ whether you hit them:
 ## 3.
 
 <!-- Your criterion. -->
+On every one of the three seeds, the model's accuracy on its most confident third of test posts is at least 0.30 higher than on its least confident third.
 
 
-
-**Why this target:**
-
-
+**Why this target:** If the model is sure about a post's label, I want to be able to trust that label without checking it myself. Each third is about 10 posts, so 0.30 means the confident third gets 3 more posts right than the unsure third. I didn't pick 0.40 because if the model makes only 3 mistakes, a 0.40 gap is impossible, so a 0.9 model would fail.
 
 ---
 
 ## 4.
 
 <!-- Your criterion. -->
+In labels.csv, no label is above 65% of the rows, and no label is below 15%.
 
 
-
-**Why this target:**
-
+**Why this target:** In the 30 posts I read, `announcement` was about 61% and `help` about 14%. The brief's cap is 70%, so a 65% cap makes me go looking for `results` and `help` posts instead of just collecting what shows up. The 15% floor matters most for `help`, because even at 15% it gets only about 4–5 posts in the 30-post test split.
 
 
 ---
@@ -102,10 +99,10 @@ whether you hit them:
 ## 5.
 
 <!-- Your criterion. -->
+Precision for `results` on the held-out test set is at least 0.83 on every one of the three seeds.
 
 
-
-**Why this target:**
+**Why this target:** A post the model wrongly calls `results` ends up in my filtered feed, where I'd trust it as real measurements when it has nothing behind it. The model calls about 6–8 posts `results` per seed, so 0.83 allows 1 wrong. That's stricter than my recall target (0.75) because a fake results post misleads me, while a missed one only means I don't see it. It also matches criterion 1, where more than 2 out of 10 mistakes is untrustworthy.
 
 
 
