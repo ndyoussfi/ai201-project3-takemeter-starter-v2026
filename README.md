@@ -42,14 +42,7 @@
 <!-- Your community, and what your classifier sorts posts into. Three or four
      sentences. -->
 
-**Community:** r/LocalLLaMA (public subreddit about running AI models locally).
-
-**Milestone 1: candidate distinctions from reading 30 posts**
-
-1. Some posts use checkable facts to support the poster's own conclusion. Many claim "state-of-the-art" or "outperforms X" with no scores.
-2. Some posts ask readers for something (help, a recommendation). Others give something (a release, results, a guide).
-3. Some posts are in the poster's own voice ("I tested", "I built"). Others pass along someone else's words (copied model cards, paper abstracts).
-4. Posts backed by results often admit their limits. Claims-only posts never do.
+TakeMeter sorts posts from r/LocalLLaMA, a public subreddit about running AI models on your own hardware. Each post gets one of three labels: `announcement` (it presents a new model, tool, paper or project), `results` (the poster backs their own conclusion with specific, checkable measurements or figures), or `help` (it asks readers to solve a problem or recommend something). I want it as a filter: show me the posts with real measurements and hide the flood of release announcements, which made up about half of what I read. It's `distilbert-base-uncased` fine-tuned on 150 posts I labelled.
 
 ---
 
@@ -75,7 +68,7 @@
 
 ### `results`
 
-**Definition:** The poster uses specific, checkable facts (their own measurements or figures they collected) to support their own conclusion or comparison
+**Definition:** The poster uses specific, checkable facts (their own measurements or figures they collected) to support their own conclusion or comparison.
 
 **Example 1:**
 > **3M token pool for Nemotron 3.5 Super on a single RTX PRO 6000**
@@ -114,19 +107,24 @@ If the post announces something new but the poster uses specific, checkable fact
 <!-- Where you collected from, how you labelled, your counts, and three hard
      cases. -->
 
-**Where the posts came from:**
+**Where the posts came from:** r/LocalLLaMA, public, in October 2026. Reddit blocks scripts from its JSON feed, so I saved four listing pages from my browser (New, two pages; Top of the week; Top of the month) and `collect.py` turned them into rows of title + blank line + body. It skipped posts with no body text (link-only and image-only), cross-posts from other subreddits, stickied mod posts, removed posts and duplicates. That gave 295 posts. Flair and Reddit's page text aren't in the listing's title or body, so none of it is in the CSV.
 
 **How I labelled them:** <!-- Cold first? Pre-labelled with AI and corrected?
 Say so plainly — the disclosure is required, not penalised. -->
+
+1. **Cold, 20 posts.** I labelled 20 random posts first with `label.py cold`, using only my definitions. They're marked `cold` in the note column.
+2. **A skip rule.** Claude then labelled the same 20 blind and told me only how often we matched: 18 of 24 decisions (75%), or 15 of 17 where neither of us skipped. Half the disagreements were `announcement` vs skip, because I'd never written down what makes a post a skip. So before going further I wrote one: *skip a post if it presents nothing new (no model, tool, paper or project), makes no point backed by checkable facts, and asks readers for nothing*. That covers jokes, rants, opinions, reactions, guides, setup show-offs with no conclusion, and general news (GPU prices, company news, policy).
+3. **AI pre-labelling, then my review.** Claude pre-labelled the other 271 posts from my three definitions, my decision rule and the skip rule. I reviewed them one at a time in `label.py review`, deciding each label before looking at the suggestion. Reviewed rows are marked `pre-labelled; checked`. I reviewed 138, 130 became training rows and 8 were confirmed skips. That's much higher than the 75% on my cold 20, so some of it is probably anchoring on the suggestion.
+4. **I stopped at 150, under the brief's stop rule.** I ran short on time, so I reviewed posts in random order until I had 150 usable rows instead of reviewing all 271. The 133 pre-labelled posts I never read are in `data/unreviewed.csv` and are not trained on. The 12 reviewed skips (4 cold, 8 from review) are in `data/skipped.csv`.
 
 **Counts per label:**
 
 | Label | Count | Share |
 |---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
-| **Total** |  | 100% |
+| `announcement` | 77 | 51.3% |
+| `results` | 46 | 30.7% |
+| `help` | 27 | 18.0% |
+| **Total** | 150 | 100% |
 
 **Three hard cases**
 
@@ -134,25 +132,25 @@ Say so plainly — the disclosure is required, not penalised. -->
      been, and what you chose. These are worth more than the easy 190. -->
 
 **1.**
-> *The post:*
+> *The post:* "72 hours, four big open weights drops. The only one that fits in 24GB came from NVIDIA, of all companies." A recap of four model releases, "all numbers from the official repos and model cards", ending with the poster's takeaways: "'Runs locally' now officially means 'runs on a computer that costs more than a car.'"
 >
-> *Could have been:*
+> *Could have been:* `announcement` or `results`
 >
-> *I chose, because:*
+> *I chose, because:* `results`. The poster measured nothing, but they collected checkable facts (prices, sizes, licences, benchmark scores) and built their own argument on them. This post changed my rule: `results` used to mean the poster's own measurements, and now it means checkable facts supporting the poster's own conclusion, whether measured or collected.
 
 **2.**
-> *The post:*
+> *The post:* "Qwen 3.8-27B-pi on 3080+3060." The poster lists their setup and real measurements ("30-40 tok/s generation, avg mtp acceptance ~0.75", "started at 10 tokens per second"), then asks "Where should I go for further improvements (if any are possible)?"
 >
-> *Could have been:*
+> *Could have been:* `help` or `results`
 >
-> *I chose, because:*
+> *I chose, because:* `help`. The numbers are real, but they describe a starting point for the question rather than supporting a conclusion. What the numbers are doing decides it, not whether they're there.
 
 **3.**
-> *The post:*
+> *The post:* "[Paper] The COUNT: Counting N-grams Unlocks Scaling on Host Memory and Training-Free Adaptation." The paper's abstract, including a real result: COUNT improves validation loss "as much as an LM with 57% more compute."
 >
-> *Could have been:*
+> *Could have been:* `announcement` or `results`
 >
-> *I chose, because:*
+> *I chose, because:* `announcement`. The result is the authors', copied from the abstract, and the poster adds no argument of their own. Passing along someone else's results is sharing, not `results`.
 
 ---
 
@@ -160,15 +158,27 @@ Say so plainly — the disclosure is required, not penalised. -->
 
 <!-- Your starting model, your settings, and anything you changed and why. -->
 
-**Base model:**
+**Base model:** `distilbert-base-uncased`
 
-**Settings:** <!-- epochs, learning rate, batch size, seed -->
+**Settings:** <!-- epochs, learning rate, batch size, seed --> 3 epochs, learning rate 2e-5, batch size 16, 128 tokens per post, seed 42.
 
-**Anything I changed from the defaults, and why:**
+**Device:** `mps` on an **Intel** MacBook Pro (Core i9-8950HK) with an AMD GPU, torch 2.2.2. The notebook prints "Apple Silicon GPU (MPS)", but that's a generic label; this machine isn't Apple Silicon.
+
+**Anything I changed from the defaults, and why:** No hyperparameters changed. One environment fix: torch 2.2.2 is the last PyTorch build for Intel Macs and is compiled against NumPy 1.x, but `requirements.txt` installed NumPy 2 and pyarrow 26 (which needs NumPy 2). I pinned `numpy<2` and `pyarrow<20` so torch and `datasets` both import.
+
+One thing to watch: posts are long (median about 1,000 characters), and 128 tokens is roughly the first 500. In longer posts, the measurements that make something `results` can sit past the cutoff, so the model may never see them.
 
 **Split sizes:** <!-- train / val / test, and per-label counts in the test
 split. If a label had fewer than about 8 in test, say so — it explains a lot
 of next unit's variance. -->
+
+| Split | Total | announcement | results | help |
+|---|---|---|---|---|
+| Train | 104 | 53 | 32 | 19 |
+| Validation | 23 | 12 | 7 | 4 |
+| Test | 23 | 12 | 7 | 4 |
+
+Two labels have fewer than about 8 in the test split: `results` has 7 and `help` has only 4. One post moves `help`'s recall by 0.25, so expect those numbers to jump between seeds next unit.
 
 
 
@@ -185,17 +195,19 @@ of next unit's variance. -->
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I gave Claude my three definitions and decision rule and asked for eight made-up posts that sit on my boundaries, then labelled them myself without seeing its answers.
+- *What came back:* Seven were clean. Post #5 benchmarked five embedding models on the poster's own notes (recall@5: 0.81, 0.78, 0.74) but never stated a conclusion, and my `results` definition required "their own conclusion."
+- *What I changed:* I decided a ranking is a conclusion and added "or comparison" to the `results` definition. Post #8 ("3x faster indexing" with no setup) also taught me that a number only counts as checkable if the post says what was measured, on what, and how.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* After labelling my 20 cold posts, I asked Claude to label the same 20 blind and tell me only the agreement percentage and the kinds of disagreements, not which posts.
+- *What came back:* 75% (18 of 24 decisions), with half the disagreements being `announcement` vs skip.
+- *What I changed:* I hadn't defined what a skip is, so I wrote the skip rule in The Dataset before any pre-labelling. My cold labels stayed as they were.
 
-**Pre-labelling disclosure:**
+**Pre-labelling disclosure:** Claude pre-labelled 271 posts from my definitions, decision rule and skip rule. I read and reviewed 138 of them one at a time. The 133 I never reviewed are excluded from `labels.csv` (they're in `data/unreviewed.csv`). The 20 `cold` rows had no AI involvement.
+
+**Other AI help, for completeness:** Claude helped me write `collect.py` and `label.py`, diagnosed the NumPy/pyarrow conflict on my Intel Mac, and drafted some of this README's text from my decisions, which I wrote. The labels, the decision rule, the skip rule and all five criteria targets are mine.
 
 <!-- ═══════════════════════ UNIT 6 — THE TEST ═══════════════════════
 
