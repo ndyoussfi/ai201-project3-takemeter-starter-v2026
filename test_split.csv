@@ -1,0 +1,571 @@
+text,label,note
+"Qwen 3.8 Flash Next optimized for two CMP 170hx GPUs
+
+I've been working on optimizing Qwen 3.8 Flash Next on my local setup with two CMP 170HX cards and finally got to a place where I feel like the results are worth sharing. Both cards are running over PCIe Gen2 x4 - no x16 mod or TP2. 
+
+The setup uses the W4A16 AutoRound checkpoint, a patched vLLM, pipeline parallelism and native MTP speculative decoding. The n-gram table is memory-mapped from NVMe but everything else fits on the two GPUs.
+
+**Decode throughput by concurrency** — aggregate tok/s, not per-user speed:
+
+| Concurrent requests | Code | JSON | Prose |
+|---:|---:|---:|---:|
+| 1 | 226 | 198 | 157 |
+| 2 | 363 | 320 | 212 |
+| 4 | 560 | 537 | 385 |
+| 8 | 840 | 873 | 567 |
+
+At eight concurrent code requests, the measured per-request decode rate was 116 tok/s, with 231 ms to first token. 
+
+A few other results:
+- 6,300–7,100 tok/s prefill on 4k–64k prompts; about 5,900 tok/s at 128k.
+- Prose decode held up from 158 tok/s at 4k context to 142 tok/s at 128k.
+- HumanEval: 157/164 (95.7%) and GSM8K: 1,271/1,319 (96.4%), both in chat mode with thinking off.
+- Uses a full 262,144-token window 
+
+For throughput, I used the sparkDash protocol: greedy decoding, thinking off, fixed 400-token outputs, and medians of three runs, not the best run. The long-context decode checks are an addition to that protocol.
+
+This is faster than any published 2x CMP 170hx recipe I've found so I wanted to share with the community. These cards are flying :)
+
+Full recipe, pinned Docker image, patches, and detailed results:
+https://github.com/AlexBrandes/cmp170hx-qwen38-flash-next",results,pre-labelled; checked
+"Craziest, strangest, funniest, and weirdest LLM fine tunes?
+
+> I wanna see a master list of the craziest/strangest/funniest LLM tunes. I heard one was talking like an expert in 1800s military vernacular and I figure there's some wacky stuff out there.
+>
+>I want to explore weird and experimental models.
+>
+>Show me what ya got!
+>
+>Bonus points for NSFW ones because I'm a perv. 
+
+
+I saw this post from 2 years ago, and was wondering what we got since then.
+
+I'm mostly interested in small ones, since I'm not rich enough to own a dedicated GPU.
+
+What have you found or made?
+
+Has anyone put together a list of these types of models?",help,pre-labelled; checked
+"I don't get the qwen 3.8 flash next hype
+
+My experience is based on running Qwen 3.8 Flash Next UD-Q4\_K\_XL on 4x 3090's
+
+Compared directly to Qwen 3.8 27b Q8 it is not even close. To add to this, strata results were even worse than llama.cpp even thought generation speeds were faster. I left 1 run for 4 hours in strata and it did not produce a playable exe. After that all runs were capped per 1 hour on the first prompt
+
+As you can see there were 2 bugs in the 27b 1st prompt completion. It fixed both of them on it's own during the second prompt.
+
+The bugs were:
+
+* Gameplay controls still worked while paused.
+* Gameplay controls still worked after game over.
+
+The local prompts are running through deepseek's harness.
+
+I am not showing screenshots of the output game as it is mostly the same from all models with slight visual differences and that is not really the point here.
+
+Exact prompts:
+
+>**Prompt 1:**  
+Build a Windows Tetris game with keyboard controls, scoring, increasing difficulty, and pause/restart. Deliver a standalone .exe that runs without installation.
+
+>**Prompt 2:**  
+Add local two-player mode with side-by-side boards and separate controls (WASD and arrow keys). The last player standing wins. Deliver the updated standalone .exe.
+
+And yes, i realize that comparing q8 model to q4 model is stupid, but so many people here claim that qwen 3.8 fn even at q3 is better than the 27b model (or at least as good) and so fast and good with strata that i had to check it.",results,pre-labelled; checked
+"24GB is plenty if your engines take turns
+
+System service that watches your card, swaps and loads whatever you want, whenever you want.
+
+Don’t have to swap anything manually, collisions avoided, VRAM fully dedicated to each function while it’s running (no VRAM squatters).
+
+I had issues everyday (Linux) where a node process would orphan, comfyUI auto starts and holds 500MB that strata can’t claim. I also wanted to be able to switch natively and not have to think about starting each engine, making sure strata or llama wasn’t stuck loaded, or flux GGUF’s still claimed in comfyUI from an old workflow.
+
+I swap between Ninfer-4090 (llama-swap), strata, comfyUI,  OpenWebUI, and I do it between multiple devices all using the same RTX 4090.
+
+Maybe you want to have your box run Hermes at night and you take the card back in the day, you can do it natively without thinking about and have full visibility on what was done and when.
+
+Berth will also serve your engines as an API so when you need to switch natively you load berth as the API endpoint and you can load strata, polystrata, and any other custom engine.
+
+Works for gaming as well, you don’t have to worry about a cron job, a request, or anything grabbing the card while you’re gaming or doing custom workflows.
+
+REPO: [https://github.com/T-Crypt/berth](https://github.com/T-Crypt/berth)
+
+  
+EDIT:
+
+*Berth v0.3 is out, and I need testers with big RAM and more than one GPU*
+
+*v0.3 parks engines in system RAM instead of unloading them. A switch back to a parked engine skips the reload from disk. My workstation has 62 GB, and Strata alone pins 40 GB, so I can't measure parking at the sizes you run.*
+
+*I'm looking for:*
+
+*- 64, 96 or 128 GB of RAM with a 24 GB card. You'd park a vLLM or ComfyUI engine, switch away, switch back, and send me the times.*
+
+*- Two or more GPUs, any mix. Multi-GPU leases are the next release, and I want real topologies before I write them.*
+
+*- Windows with an NVIDIA card. One of you already runs it there. contrib/windows/check.ps1 compares Berth's per-process VRAM with Task Manager and writes a report.*
+
+*- AMD on Linux, for the release after that.*",announcement,pre-labelled; checked
+"HermesConsole: A demo showing off VoiceManager, my low latency streaming STT / TTS server. MIT, client docs, and python client.
+
+Hey, everyone! I'm so happy to finally share this with the community. I started VoiceManager way back in March to support a game concept and my AI assistants. I had the idea for this Trek inspired app to build pieces for a future project.
+
+Low latency streaming speech to speech running locally, streaming over one WebSocket. The default configuration uses a special audio.cpp sidecar with Nemotron and Breeze TTS 2.
+
+VM supports turn based conversations with barge-in. Barge-in is off by default because echo cancellation is tricky. An update on my tablet broke hardware aec so I added the toggle.
+
+It has client integration docs and a Python client. Use it to add a voice to your agent. The console app serves as a client reference in Kotlin.
+
+In the video:
+
+\- A wake word (""hey computer"") starts a conversation. The wake word runs on the tablet.  
+\- The reply streams back as speech, sentence by sentence.  
+\- Images and markdown documents show on the panel under the reply.  
+\- Tool calls go back to the app. In the video it displays the volume settings and opens / closes the calculator.  
+\- I interrupt a reply by speaking over it (barge-in).  
+\- A session keeps its context between turns, and past sessions keep their history.
+
+VoiceManager:  
+[https://tacotakumi.github.io/VoiceManager](https://tacotakumi.github.io/VoiceManager)
+
+[https://github.com/TacoTakumi/VoiceManager](https://github.com/TacoTakumi/VoiceManager)
+
+HermesConsole: [https://github.com/TacoTakumi/HermesConsole](https://github.com/TacoTakumi/HermesConsole)
+
+Thanks for checking it out and I'm happy to answer any questions.
+
+You can read more about the console app over here: [https://www.reddit.com/r/hermesagent/comments/1xafq1e/hermesconsole\_an\_lcars\_style\_voice\_console\_for/](https://www.reddit.com/r/hermesagent/comments/1xafq1e/hermesconsole_an_lcars_style_voice_console_for/)",announcement,pre-labelled; checked
+"Muse Spark on M3U 256 GB
+
+Instead of counting 'hmm' on DeepSeek v4.1 Flash 1017, I today clamped Muse Spark Open 816B-A42B to ds4. 
+
+This was the first successful run, FTW, that made it to decode... 4 t/s! #RoastMe. I'm hoping it will 4-5x with any luck. I'll obvs be running larger prefill chunks too (pre-metal leftovers), but I'm not expecting such leaps.",announcement,cold
+"Nine models, five coding tasks, one 16GB GPU
+
+I ran five coding tasks against ten models on one RX 9060 XT (16 GB). Each run gets a single spec file in an empty directory and has to produce `solution.py` and `test_solution.py`, run its own tests, and stop. Grading happens with a checker the model never sees: fixed cases from the spec, randomized cases against a brute-force oracle, and a performance gate where the spec names one. A cell is capped at 1750 seconds; if the model is still working when the clock runs out, whatever is on disk gets graded.
+
+The tasks: quoting rules for one CSV record (c1), an arithmetic evaluator with pinned exception behavior (c2), a POSIX-ish shell tokenizer (c3), max-profit interval scheduling with two tie-breaks and 200k intervals in under 3 seconds (c4), and shortest-prefix pattern matching with 20 stars against a 4,000-character text in under 10 seconds (c5).
+
+| model | c1 | c2 | c3 | c4 | c5 | score | out tokens |
+|---|---|---|---|---|---|---|---|
+| deepseek-v4.1-flash (cloud API, no local quant) | P | P | P | P | P | 5/5 | 43k |
+| Qwen3.8-27B-ASCII-Condensed UD-IQ4_XS + MTP (kvstream fork) | P | P | P | P | P | 5/5 | 185k |
+| Qwen3.8-27B UD-IQ3_XXS + MTP Q4_0 sidecar | P | P | P | F | P | 4/5 | 125k |
+| Swift-1.5-Qwen3.8-27B GSQ-RCO-IQ3_XXS, embedded MTP | P | P | P | P | F | 4/5 | 113k |
+| Ornith-1.5-35B-A3B Q4_K_M | P | P | P | P | F | 4/5 | 57k |
+| Qwen3.8-Flash-Next Coder GSQ-RCO-IQ1_M | P | P | P | P | F | 4/5 | 89k |
+| Qwen3.6-35B-A3B UD-Q4_K_M (unpruned) | P | P | P | P | F | 4/5 | 126k |
+| Nemotron-3.5-Bolt-74B-A9B IQ2_XXS | P | F | F | F | F | 1/5 | 51k |
+| Mellum2.1-12B-A2.5B-Thinking Q6_K | F | P | F | F | F | 1/5 | 167k |
+| LFM2.5-24B-A2B Q6_K | F | F | F | F | F | 0/5 | 187k |
+
+c1 to c3 mostly sort models into ""writes code and iterates"" and ""does not"". Everyone who reached c3 wrote a single-pass scanner of 76 to 97 lines and passed, and nobody was tempted into `shlex`, which would have failed the comment rule.
+
+c4 and c5 carry the signal. On c4 every model that produced a file used the same shape: sort the intervals, then a DP with `bisect` for the predecessor, which Flash replaced with coordinate compression. The losses were the tie-break rule, the cost of carrying interval lists through the DP, and duplicate-heavy input. On c5 the split is clean. All three passes came from an automaton stepping a set of live states through a closure (both Qwen3.8-27B variants built a Thompson NFA, the cloud run used a big-integer bitset). The failures came from parse-then-match routines that missed one rule each, or from handing the matching to Python's `re`, which backtracks on star piles and eats memory while it does. Flash is the exception: it built the same big-integer bitset automaton the cloud run did, cleared the gate at 0.5 ms, and still failed by reading `{` inside a group as a literal where the spec wants an error.
+
+Per model:
+
+- deepseek-v4.1-flash: 5/5 in 236 s and 43k tokens. `bisect` DP at 0.25 s on c4, bitset NFA at 0.00 s on c5. Writes a test file, runs it, stops.
+- kvstream-fork (Qwen3.8-27B UD-IQ4_XS with MTP): also 5/5, but 185k tokens over 94 minutes. Thompson NFA with epsilon closure on c5, 0.03 s. Both of its capped cells were self-inflicted: on c5 it reported ""all tests pass"" (the grader agreed) and then hung a 9,000-case fuzz whose oracle translated patterns to `re`.
+- Qwen3.8-27B IQ3_XXS: 4/5, clean on c1 to c3. c4 produced no file at all: 46k tokens of `ls`, `pwd` and re-reading the spec, with no code in its reasoning either. Solved c5 with the same NFA design.
+- Swift-1.5-Qwen3.8-27B: 4/5. Writes early and iterates hard, 8 edits and 22 bash calls on c1. c4 passes at 0.27 s; c5 never rejects nested groups.
+- Ornith-1.5-35B-A3B Q4_K_M: 4/5 and the cheapest local, 57k tokens and about 16 minutes for all five cells, c1 done in 37 s. c5 fails one randomized case where a group and a star interact.
+- Qwen3.8-Flash-Next Coder GSQ-RCO-IQ1_M: 4/5 at 89k tokens and 45 minutes, the second cheapest local at this score. A 55 GB IQ1_M model, its experts are cached in host RAM. c3 fuzzes the tokenizer against the real `bash` word splitter on 4,582 inputs, a stronger oracle than its own second implementation. c4 compresses coordinates and DPs right to left, 0.48 s against the 3.0 s gate. c5 is the same big-integer bitset the cloud run used, and the one rule it gets wrong is `{` inside a group. Its c4 row is a snapshot pass: the host OOM killed the engine and the desktop session 684 seconds in, with the file already correct on disk.
+- Qwen3.6-35B-A3B UD-Q4_K_M: 4/5 at 126k tokens, fastest local cells on c2 and c3. c4 is correct but measured 3.03 s against the 3.0 s gate, and re-grading the same file gives 2.97 to 3.23 s. c5 misses the nested-group rule too.
+- Nemotron-3.5-Bolt-74B-A9B IQ2_XXS: 1/5. Three cells spend two turns, make one tool call, and then report files that do not exist; c3's report still had the agent template's placeholder ""What was done."" in it. c1 is a real pass, and its reasoning for c3 did contain code that passes the grader.
+- Mellum2.1-12B-A2.5B-Thinking Q6_K: 1/5, and its c1 answer was a file named BLOCKED with the reason in it. c3 never returns on `tokenize(""ab cd"")`. c5 converts the pattern to a Python regex; grading that file needs a memory cap, since uncapped it reached 7.3 GB.
+- LFM2.5-24B-A2B Q6_K: 0/5. Three of the five cells used the entire cap, 187k tokens in all. c1 took 88 turns and still ended in an empty-field off-by-one. c4 is correct and slow: 6.98 s against the 3.0 s gate, because it copies the chosen interval list inside the DP.
+
+Two models scored 5/5: 43k tokens in 236 seconds for the cloud run, 185k in 94 minutes for the fork. On c5 the cloud run needed 8 turns. The fork took 28 and still hit the cell cap.
+
+I made a github repo if anyone wants to give it a go: https://github.com/Tako88/coding-bench
+
+The results there are V2, not directly comparable to the ones in this post",results,pre-labelled; checked
+"Is there a Strata for lfm 24b a2b
+
+Is there a fork of strata that let me run lfm 24b a2b on only 16GB of ram comfortably? And how much tps can I expect per second and what quantization should I use? and Thanks!",help,pre-labelled; checked
+"ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-Coder-GGUF updated
+
+Look out for the updated version!
+
+  
+**What changed**
+
+This update changes **which experts are retained**. No retained weights were modified relative to the base IQ3\_S model. About **25% of the retained expert selection differs** from the previous release.
+
+The model remains **English-only**. With a limited expert budget, we prioritized preserving English capabilities so unfortunately, multilingual capabilities were not preserved.",announcement,pre-labelled; checked
+"DeepSeek 4.1 Flash 1017 Incoming? --> DeepSeek users report a possible V4.1-Flash-1017 refresh across its API
+
+Was waiting for this.
+
+Edit: And it just dropped: [https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017)",announcement,pre-labelled; checked
+"Calling all GPUs: help us benchmark SonicBoom v0.0.3 — a compiler-first AI runtime that beats llama.cpp on decode
+
+Hi folks!
+
+We are HardenedLinux, an old-school free software community. SonicBoom is our open-source (GPLv3)
+inference runtime: a compiler-first alternative to the usual Python stack. No Python at build
+or run time — one shared library, a C ABI, and Guile Scheme as the first-class language.
+
+What v0.0.3 does on a desktop RTX 3050 8 GB (same session, same GGUF, vs llama.cpp -ngl 99):
+
+| model | decode (tg64) | prefill (pp512) |
+|---|---|---|
+| Gemma 4 E4B Q3_K_M | 1.18× | 1.00× |
+| Qwen2.5-0.5B Q4_K_M | 1.12× | 1.09× |
+
+On real multi-turn agent workloads, time-to-first-token dropped several-fold since v0.0.2
+(prefix reuse + plan caching). Output tokens are bit-identical to our golden runs, and prefix
+reuse is bitwise identical to a full prefill.
+
+How: all graph optimization and kernel generation happen on Boom IR, an MLIR dialect; hot
+quantized matmuls run as attributed ggml-derived kernels. Every optimization has a switch and
+an ablation number, so you can see what each one buys.
+
+Where we are honest about gaps: Qwen decode at depth 512 is 0.98×, and we have only one GPU.
+That is exactly why we need you.
+
+The invitation: every release gets one benchmark issue. If you have an NVIDIA GPU (any
+generation — Ada, Hopper, Blackwell especially welcome), one command produces a report you can
+paste. Everyone whose results we publish is credited in the README.
+
+→ v0.0.3 benchmark issue: [https://github.com/hardenedlinux/SonicBoom/issues/2](https://github.com/hardenedlinux/SonicBoom/issues/2)
+
+Please post results and problems in the issue rather than here, so everything stays in one place.",help,cold
+"Uncensor an LLM without touching weights: inject a tiny trained KV-cache bank (~18MB) and unload it anytime
+
+I shipped something I've been building for the last few weeks : phantom-kv , a refusal-removal system for large language models that doesn't touch a single weight. Instead of editing the model, it loads a small, learned bank of key/value tensors into the model's KV cache as context. Attention reads it like conversation history that's already there.
+
+[https://github.com/lordx64/phantom-kv/](https://github.com/lordx64/phantom-kv/)
+
+https://reddit.com/link/1wms904/video/7efg1le3eyqh1/player
+
+The result is that ""uncensoring"" stops being a permanent checkpoint edit and becomes a  per-request, hot-swappable capability mode: unload the cache and the base model is byte-identical again.
+
+Every prior approach to refusal removal commits somewhere permanent. Weight-space abliteration rewrites the checkpoint undoing it means re-flashing weights, and it breaks per quantization. Activation-space projection subtracts a refusal direction at runtime, per token, per layer, from inside an engine hook  the model's signal path itself is patched at boot. phantom-kv does neither: it's trained offline against the model's own objective (comply on harmful prompts, preserve behavior on harmless ones), ships as megabytes of cache content instead of a new checkpoint, and influences the model only through the input channel attention already consumes. No 1-D refusal-direction assumption, no forwarding-pass hooks, no per-arm rebuilds for new architectures.
+
+[the blue pill, the incident-responder mode:Asked to unpack a malware sample that hides its imports behind API hashing , canonical DFIR work, the base model declines with a canonical \\""must be authorized\\"" hedge, the way it declines anything that sounds like reverse engineering. On the blue pill, the same session immediately produces the actual unpacking procedure: what API hashing is, how the resolution loop works, which APIs resolve the names, and what tooling fits. Nothing  else is unlocked: offensive work stays guarded. It's not a jailbreak , it's a deployment-controlled mode for defenders.](https://reddit.com/link/1wms904/video/vyf644xxmyqh1/player)
+
+[the red pill: cyber-selectivity, per domain:the defensive blue pill refuse  the defensive-only mode keeps off-domain guardrails intact. On the red pill, the same session delivers a step-by-step payload explanation. One model. Three capability modes. A defensive team mode for analysts, an offensive team mode for authorized operators, both shipped alongside the same guardrailed weights  shown as 129 cache slots apart, not separate checkpoints.](https://reddit.com/link/1wms904/video/nsx9725imyqh1/player)
+
+We also audited ourselves: an 8B judge-model audit shows lexical refusal-suppression metrics over-claim compliance (semantic refusal often persists as rephrasing), the graft fades with a \~2–4k token half-life in long sessions (and a measured re-injection cadence mitigates it), and answers come with legal/ethical framing ling because the graft's job ends where the model's profession takes over.
+
+Source : [https://x.com/lordx64/status/2102138825292276168?s=20](https://x.com/lordx64/status/2102138825292276168?s=20)",announcement,cold
+"ChatGPT, but self-hosted
+
+Happy ~~taco~~ slopo Tuesday friends,
+
+OWUI is bloated. It tries to do too many things and doesn't get the basics right. A polished interface is what most of us actually want. Not everyone needs knowledge bases and a RAG pipeline. Some people just want a clean, polished place to chat and code with their local models. That's what I've been building for the past few months.
+
+ChatGPT, but self-hosted. Because that's what ChatGPT actually is now. A really good chat experience, with Codex sitting in it for when you want to code.
+
+**What you get:**
+
+* Built-in voice: local TTS + STT + live voice2voice, no API keys (CPU/GPU)
+* Built-in web search: bundled SearXNG with free fallbacks.
+* Coding agents: Codex, Claude Code, OpenCode, Pi, or Hermes
+* One command: `curl -fsSL https://overtchat.com/install | sh`
+* Use it anywhere: [web](https://overtchat.com), [macOS / Windows / Linux](https://github.com/yoloyash/overtchat/releases), [Android](https://play.google.com/store/apps/details?id=com.overtchat.mobile), [iOS](https://apps.apple.com/us/app/overtchat/id6812165221).
+* OvertChat Cloud: a free relay that can't decrypt your traffic. [Open source](https://github.com/yoloyash/overtchat-relay). Claim your free URL`slopmaster.overtchat.app` and share the app with your friends/family if they ask you why you spend so much on hardware (everyone gets their own accounts).
+
+**Why it's worth trying over others:** OWUI/LibreChat are workspaces you maintain. OvertChat is a product you just use. ChatGPT for your local models: polished chat, coding agents, and a first-party app on every platform you own, all in one. That's the pitch.
+
+Since the last time I posted here, a few more people have contributed, which I didn't expect lol. 123 stars and growing. **It is vibe coded** but it's not slop. I've been working on it for almost 6 months now and have not missed a single week.
+
+Forgot the link lol - [https://github.com/yoloyash/overtchat](https://github.com/yoloyash/overtchat), [overtchat.com](http://overtchat.com)",announcement,pre-labelled; checked
+"What to expect from the Intel D270 GPU?
+
+I accidentally have stumbled over an exciting announcement of Intel. Here are official specs:
+
+[https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu/d-series.html](https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu/d-series.html)
+
+\- up to 480Gb VRAM LPDDR5
+
+\- 1.5T/s mem bandwidth
+
+\- interference optimized
+
+Do we have a clue about the range it will be priced in?
+
+Is it reasonable to build a workstation with this card, or does this require server hardware?
+
+What can we assume about driver support? (no Cuda, thats for sure)
+
+  
+It seems like a decently sized card for running the current high-end open weight models, so I'd like to know that details are known about it already...",help,pre-labelled; checked
+"Qwen3.8-Flash-Next vs Opus 5.5: Six-way benchmark on a real Rust feature with Claude Code and Pi
+
+A few of you pointed out in my [last post](https://www.reddit.com/r/LocalLLaMA/comments/1wyzt1d/story_time_qwen38flashnext_on_my_strix_halo/) that comparing Flash-Next and Opus with different harnesses and effort levels wasn't fair. So here is a more controlled comparison.
+
+Same task for every run: a real feature from the [LlamaStash](https://github.com/llamastash/llamastash) roadmap (save llama-server's KV cache before an unload and restore it when the model comes back). Six combinations, each run twice, so 12 PRs. Flash-Next ran locally on my Strix Halo laptop (Flow Z13) via Halogen (~Q4 quant). Opus 5.5, Flash-Next, and Kimi K3 scored every PR on seven review questions plus CI.
+
+| Combination                      | Score (of 8) |     Time | API cost | Tokens (in / cached / out) |
+| -------------------------------- | -----------: | -------: | -------: | -------------------------- |
+| Claude Code + Opus 5.5, xhigh    |   6.94 (87%) | 43.5 min |   $17.78 | 507k / 48.3M / 203k        |
+| Claude Code + Opus 5.5, medium   |   6.25 (78%) | 23.4 min |    $6.52 | 242k / 13.4M / 95k         |
+| Claude Code + Flash-Next, medium |    5.5 (69%) | 45.3 min |    $0.32 | 445k / 13.5M / 82k         |
+| Pi + Flash-Next, xhigh           |   5.44 (68%) | 63.8 min |    $0.67 | 316k / 35.0M / 134k        |
+| Claude Code + Flash-Next, xhigh  |   5.38 (67%) | 49.5 min |    $0.39 | 269k / 18.9M / 99k         |
+| Pi + Flash-Next, medium          |   5.06 (63%) | 48.1 min |    $0.56 | 242k / 29.1M / 117k        |
+
+Scores are the average of both runs. Time, cost and tokens are from the second run, where the 100k-token benchmark numbers were given in the prompt. Flash-Next cost is at the QwenCloud price for Qwen3.8-Flash; I ran it locally, so it cost me only electricity.
+
+TL;DR
+
+- All 12 runs finished and all 12 PRs pass the end-to-end test.
+- Opus wrote better code, 82% on average against 68% for Claude Code + Flash-Next and 66% for Pi + Flash-Next. The difference is in edge cases, tests and docs. The core feature works fine. The gap between Opus and Qwen is not that wide.
+- Flash-Next took 1.1x to 2.1x as long as Opus at the same effort.
+- With Flash-Next, Claude Code and Pi scored the same on the review questions. CI passed on 4 of 4 Claude Code PRs and 1 of 4 Pi PRs.
+- xhigh helped Opus a bit at 2.7x the cost. For Flash-Next, medium and xhigh scored about the same, and medium was faster in all 4 pairs.
+
+Opus is still ahead, but Flash-Next was right behind, on my laptop, for the cost of electricity.
+
+Also note that the models are not on the same league. Opus is a frontier model run at FP16 or atleast FP8. I ran Flash-Next on my laptop at [4.16 bpw](https://github.com/peonist-ai/halogen-flash-server/blob/main/docs/QUANT.md). Flash-Next at FP8 should show a bit more quality.
+
+The machine running Flash-Next ran at 70W TDP ceiling for the entire duration. I could have run it at 90W for slightly better speed but the fan noise and thermal stress was not worth it.
+
+Full write-up with the detailed methodology and the per-run results and what each model missed: https://deepu.tech/qwen3.8-flash-next-vs-claude-opus-showdown
+
+All 12 PRs are public if you want to read the code: https://github.com/deepu105/llamastash-b4r2/pulls",results,pre-labelled; checked
+"Geezuz kernel: Qwen3.8-27B at 190 tok/s (620~ tok/s at 8 requests) on two 3090s
+
+**Geezuz, its fast!**
+
+Qwen3.8-27B, two RTX 3090s power-limited to 280 W, plain PCIe, no NVLink, at 0 Context:   
+(tests showing results with context are found on the next table) 
+
+|Requests|Q4\_K\_M|Q8\_0|
+|:-|:-|:-|
+|1 request|**190 tok/s**|143 tok/s|
+|8 requests at once (total)|**622 tok/s**|610 tok/s|
+
+llama.cpp's fastest two-GPU setup did about 100 tok/s on the same prompts. This did 164 on average and 214 on code, at the same output quality (KL divergence against llama.cpp).
+
+It's a fork of L-Forster's single-GPU megakernel from [open-jet](https://github.com/L-Forster/open-jet), where the whole forward pass runs as one persistent CUDA kernel. My fork splits it across two cards, which sync and exchange partial results directly over PCIe, and decodes up to 8 requests in one cycle with tensor-core paths for Q4\_K, Q5\_K, Q6\_K and Q8\_0.
+
+The model drafts its next tokens with its own MTP head, and verifying 5 drafted tokens costs almost the same as generating 1, because the weights are only read once per pass.
+
+Comes with an OpenAI-compatible server (shared KV pool, prefix cache) and a prebuilt tarball for RTX 30 cards. Compiling takes almost 60Gb of ram. And about 55 minutes on a 5800x CPU or around 30 minutes on a 9800x3d.
+
+**Repo, every benchmark and the build-by-build changelog:** [https://github.com/ohgeebtw/geezuz-qwen3.8-27b-dual-gpu](https://github.com/ohgeebtw/geezuz-qwen3.8-27b-dual-gpu)
+
+My next target for this week is beating vLLM at 8 parallel requests, where it still leads by about 15 %.
+
+**Speed vs llama.cpp and vLLM** (total tok/s, 2x RTX 3090 (280w), TP2, greedy, 4 MTP drafts, 512 tokens per request)
+
+|Context, parallel requests|Geezuz Q4\_K\_M|llama.cpp Q4\_K\_M|vLLM GPTQ int4|Geezuz Q8\_0|llama.cpp Q8\_0|vLLM FP8|
+|:-|:-|:-|:-|:-|:-|:-|
+|10K, 1|**159**|95|104|**124**|87|88|
+|10K, 2|235|160|**243**|213|150|**223**|
+|10K, 4|389|254|**404**|355|223|**396**|
+|10K, 8|550|312|**576**|519|324|**595**|
+|60K, 1|**143**|91|113|**119**|93|103|
+|60K, 2|195|134|**208**|**193**|119|188|
+|60K, 4|289|181|**323**|**284**|159|doesn't fit|
+
+llama.cpp b10246 (same GGUF, tensor split), vLLM 0.31.0. Same settings for all engines, none tuned. Measured on an earlier build with 8-bit KV on all three engines; fp16 KV run will follow soon. 
+
+If you have a couple 4090s or 5090s, I would love to see your numbers!",results,pre-labelled; checked
+"Eagle-4 Released: Faster than DFlash2 & DSpark
+
+Insane numbers, so far only Qwen3.8-27B is supported but wow those are some good numbers. Will watch closely when this lands in llama.cpp/vLLM
+
+\### Qwen 3.8 27B Benchmark Results
+
+|**Method**|**Speedup over Vanilla**|
+|:-|:-|
+|MTP|2.22×|
+|DSpark|2.57×|
+|DFlash 2|2.80×|
+|EAGLE-4|3.59×|",announcement,pre-labelled; checked
+"GPT-Image-style photo editing on your own GPU (12 GB+): I built a zero-setup app for Qwen-Image 2.1 on stable-diffusion.cpp
+
+Every local setup I tried for Qwen-Image 2.1 meant a Python env, a node graph and an evening of picking quantization, offloading and resolution for my card. **Kokon** is a *free, open-source desktop app* that does all of that for you and gives you a plain photo editor on top.
+
+* **Zero setup:** first run detects your GPU and memory and downloads the matching GGUFs (Qwen-Image 2.1 Turbo Q4\_K + Qwen3-VL 8B text encoder, \~12 GB, checksummed). Each job is sized automatically: working resolution, VRAM/RAM split, tiled VAE, retry if it runs out of memory.
+* **Engine:** stable-diffusion.cpp (ggml), so no Python, no PyTorch. CUDA, Vulkan and Metal builds.
+* **An editor, not a workflow:** type the change, or brush an area with Change / Remove / Replace / Add. The brushed area is marked on a second reference image, so the model actually sees it. Versions with undo, before/after, upscaler comparison.
+* **Hardware:** NVIDIA 12 GB+ (CUDA). Apple Silicon (Metal, beta, slow: \~4 min per image on a 16 GB M2 Pro). AMD / Intel Arc 12 GB+ via Vulkan (beta, only tested on NVIDIA so far, reports very welcome).
+* **Speed:** 5070 Ti 16 GB: \~24 s per edit at 1.5K, \~40 s for a native 2K edit.
+* **Agents:** built-in MCP server (`generate_image`, `edit_image`, `inpaint_image`, `outpaint_image`, `upscale_image`…) and a local HTTP API: `npx -y kokon-mcp`, also in the official MCP Registry.
+* **Not yet:** Linux; code signing (SmartScreen warns on first run); reusing model files you already have is a manual workaround for now ([\#14](https://github.com/GabrieleLozupone/kokon/issues/14)).
+
+Repo: [https://github.com/GabrieleLozupone/kokon](https://github.com/GabrieleLozupone/kokon) · Site: [https://kokon.app](https://kokon.app)
+
+Code is AGPL-3.0; the Qwen weights are under the Qwen Research License (non-commercial).
+
+**Update, Oct 16: Kokon 0.9.3 is out.** Cleaner images (a new decoder removes a fine grid pattern), use the model files you already have (ComfyUI folders), 8 GB GPUs in beta, GPU choice in setup, zoom and pan. LoRA support is next, in 0.9.4. [https://github.com/GabrieleLozupone/kokon/releases/tag/v0.9.3](https://github.com/GabrieleLozupone/kokon/releases/tag/v0.9.3)
+
+**Update, Oct 16 (later on): Kokon 0.9.4 is out**, now on Linux too (.deb for Ubuntu/Debian/Mint, .rpm for Fedora; NVIDIA CUDA and AMD/Intel through Vulkan), plus colour LUTs (8 built-in looks or your own .cube files), about 2x faster inpainting and macOS 15 support. LoRA support moved to 0.10.0, sorry for the change: Linux was the most requested and went first. [https://github.com/GabrieleLozupone/kokon/releases/tag/v0.9.4](https://github.com/GabrieleLozupone/kokon/releases/tag/v0.9.4)
+
+**Update (Oct 20): 0.10 is out**, with Prompt+ (the text encoder writes your prompts) and your own LoRAs (beta): [https://www.reddit.com/r/LocalLLaMA/comments/1xazqxz/](https://www.reddit.com/r/LocalLLaMA/comments/1xazqxz/)",announcement,pre-labelled; checked
+"I built a tool that lets you turn almost any website into an API for free 🚀
+
+Meet Hermo 👋
+
+A free, local-first tool that lets you turn websites into callable APIs without writing a single line of automation code.
+
+The idea is simple:
+
+1. Open a website in Chrome.
+
+2. Record the actions you want to automate.
+
+3. Define your inputs and outputs.
+
+4. Hit Publish API.
+
+That's it! You now have an API endpoint that your apps, scripts, or AI agents can call.
+
+And the best part?
+
+Hermo runs locally on your computer using your existing browser session. No cloud browsers, no paid AI models, and no per-request API fees from Hermo.
+
+It also supports MCP, so your AI agents can interact with websites through your published workflows.
+
+You can use it to automate repetitive tasks, extract website data, or build integrations for websites that don't offer public APIs.
+
+🔗 GitHub: https://github.com/PraveenNimilka/Hermo
+
+I'd love to hear your thoughts!
+
+What website would you turn into an API with Hermo?",announcement,pre-labelled; checked
+"Nvidia Nemotron 3.5 Super 120B vs. Qwen 3.8 27B - comparison of storytelling and visual animations in html
+
+I was testing the visualization capabilities of different models and came up on quite a dramatic difference between Nemotron and Qwen, wanted to share, just as a difference to the ""draw a pelican riding a bicycle"" test.
+
+Prompt: *""Write a single html animation with canvas and no libraries explaining visually how noise cancelling headphones work. Plan out the explanation steps and storyboard them with the text, labels, and visuals, then do the coding. Visually, use frosted-glass UI: translucent panels that genuinely blur the vivid gradient blobs and orbs behind them, 1px light borders, diagonal specular sheen, fine frosted grain and crisp inter type.""*
+
+Results (model produced html page as result, these are videos of the resulting animation)
+
+**NVidia Nemotron 3.5 Super VL 120B A12B Q4_K_M** (thought for 7 minutes, 31 tps)
+
+https://imgur.com/B3l0qV1
+
+**Qwen 3.8 27B Q8_0** (thought for 20 minutes, 15 tps)
+
+https://imgur.com/NsKj4XR
+
+Tested on AMD Strix Halo 128GB, LM Studio on Win11.
+
+It's pretty clear which model gave a better result! It really hits way above its weight class.",results,pre-labelled; checked
+"[Paper] DLite: History-free Speculative Decoding for Agentic AI
+
+>Speculative decoding has become a mainstream technique for accelerating large language model (LLM) inference by using a lightweight draft model to generate candidate tokens that are subsequently verified by the target model. However, agentic workloads introduce long and continuously evolving contexts and frequent multi-turn interactions. Under such workloads, we observe that existing draft models suffer from up to an 80% degradation in acceptance length, while maintaining their historical KV cache introduces substantial system overhead. In this paper, we identify the growing historical context as a common source of both problems and introduce DLite, a history-free speculative decoding framework for agentic AI. DLite directly reuses contextual hidden states from the target model and performs local speculative prediction without explicitly maintaining the historical context, transforming an increasingly complex modeling problem into local simple prediction problem. A lightweight sequential head further restores intra-block causal dependencies with low overhead. To effectively train this heterogeneous history-free architecture, we introduce a tailored two-stage training strategy. Experiments on general-purpose, long-context and agentic workloads show that DLite achieves 2-6 acceptance length and outperforms the state-of-the-art speculative decoding method, DSpark, up to 70%.
+
+* **arXiv** : [https://arxiv.org/abs/2610.23787](https://arxiv.org/abs/2610.23787)
+* **PDF** : [https://arxiv.org/pdf/2610.23787](https://arxiv.org/pdf/2610.23787)
+* **GitHub** : [https://github.com/SJTU-DAI-Sys/DLite](https://github.com/SJTU-DAI-Sys/DLite)
+* **HuggingFace** : [https://huggingface.co/collections/SJTU-DAI-Sys/dlite](https://huggingface.co/collections/SJTU-DAI-Sys/dlite)",announcement,pre-labelled; checked
+"Hardly any benchmarks for Intel B65, so I got 4x and tested them.  Long Context Sweeps for Flash-Next and other models
+
+EDIT:
+Note that I built off the official vllm documentation and I just got done validating the system.  This is now my control. 
+That means this is a slow and stable config.
+Now that i have a baseline control I’m going to begin tweaking settings for performance runs.  I’ll make posts as I find settings that improve performance.
+For example, I already know that I can cut prefill times by increasing chunk size.
+
+Howdy Folks!  New batch of tests from my 4x B65 rig I built, because I was curious to test how the high memory bandwidth works out in reality.  This time doing long context sweeps for our most popular models!
+
+If there are specific tests that you want to see, hit me up and I'll see if I can fit them in.
+
+I'm also starting offload tests, where I put some of the layers into system RAM.  So far only doing it with flash-next, but interesting results in the ""by model"" section of my site for flash-next.
+
+Some Examples below, full context sweep list of all the models I tested: https://b65.thekaiser.us/matrices/
+
+AI Generated table from my data:
+
+**Qwen3.8 Flash-Next and 27B — Intel Arc Pro B65 context sweeps**
+
+All numbers are **overall output throughput in tokens/sec**, measured across repeated requests during each 30-second test. This includes waits between requests; it is not prompt-processing speed.
+
+Columns show requested simultaneous requests. Context lengths use K = 1,024 tokens.
+`*` = requests queued/capacity-limited. `—` = skipped as over capacity.
+
+**Flash-Next W4A16 — 4× B65 — MTP-3 enabled**
+vLLM 0.30.0 · October 18, 2026
+
+| Context | 1 request | 2 requests | 4 requests |
+|:--|--:|--:|--:|
+| 0 | 84.5 | 145.6 | 243.2* |
+| 16K | 73.4 | 115.4* | 166.4* |
+| 32K | 71.0 | 105.7* | 137.3* |
+| 64K | 68.6 | 109.3* | 143.7* |
+| 128K | 55.0 | 72.3* | — |
+| 200K | 45.8 | 66.2* | — |
+
+[Full results](https://b65.thekaiser.us/matrices/cmvdrfbjl0052rf01l8g5majm/)
+
+**Flash-Next W4A16 — 4× B65 — MTP disabled**
+vLLM 0.30.0 · October 18, 2026
+
+| Context | 1 request | 2 requests | 4 requests |
+|:--|--:|--:|--:|
+| 0 | 42.7 | 85.1 | 159.2 |
+| 16K | 40.8 | 79.4 | 141.9* |
+| 32K | 39.3 | 75.2* | 127.3* |
+| 64K | 38.6 | 73.5 | 127.6 |
+| 128K | 34.5 | 61.2* | 101.7* |
+| 200K | 31.5 | 57.0* | — |
+
+[Full results](https://b65.thekaiser.us/matrices/cmvdrf8lb003orf01phsr3c8s/)
+
+**Qwen3.8-27B INT4 — 1× B65**
+vLLM 0.31.0+xpu.llmscaler · October 19, 2026
+
+| Context | 1 request | 2 requests | 4 requests | 8 requests | 16 requests |
+|:--|--:|--:|--:|--:|--:|
+| 0 | 20.2 | 59.9 | 115.1 | 204.3 | 159.3 |
+| 8K | 19.8 | 57.4 | 106.6 | 184.5 | 144.8 |
+| 32K | 18.2 | 48.2* | 84.0 | — | — |
+| 64K | 16.7 | 42.1* | — | — | — |
+| 128K | 14.6 | — | — | — | — |
+
+[Full results](https://b65.thekaiser.us/matrices/cmvfummc501vsrf01jrvuxipf/)
+
+**Qwen3.8-27B INT4 — 4× B65**
+vLLM 0.31.0+xpu.llmscaler · October 19, 2026
+
+| Context | 1 request | 2 requests | 4 requests | 8 requests | 16 requests |
+|:--|--:|--:|--:|--:|--:|
+| 0 | 50.4 | 129.8 | 253.4 | 468.2 | 458.1 |
+| 8K | 49.4 | 125.9 | 239.6 | 417.1 | 422.8 |
+| 32K | 46.2 | 108.7* | 197.7* | 310.6* | 332.8 |
+| 64K | 43.5 | 96.3* | 172.2 | 270.9* | 286.2 |
+| 128K | 37.8 | 76.0* | 121.8* | 181.8* | — |
+| 200K | 33.8 | 63.3* | 97.9* | — | — |
+
+[Full results](https://b65.thekaiser.us/matrices/cmvfgnb4a015zrf01ci2wbnv0/)
+
+**Qwen3.8-27B FP8 — 4× B65**
+vLLM 0.32.0 · October 19, 2026
+
+| Context | 1 request | 2 requests | 4 requests | 8 requests | 16 requests |
+|:--|--:|--:|--:|--:|--:|
+| 0 | 30.5 | 59.7 | 116.2 | 222.8 | 404.2 |
+| 8K | 30.0 | 58.6 | 111.6 | 205.8 | 354.5 |
+| 32K | 28.7 | 54.4 | 98.5 | 177.4 | 269.7 |
+| 64K | 27.9 | 52.3 | 94.0* | 164.3* | 242.3* |
+| 128K | 25.3 | 46.3 | 78.9* | 117.2* | — |
+| 200K | 23.2 | 41.3 | 66.9* | — | — |
+
+[Full results](https://b65.thekaiser.us/matrices/cmvffs4dm013crf01w7f5yrai/)
+
+**Qwen3.8-27B BF16 — 4× B65**
+vLLM 0.32.0 · October 19, 2026
+
+| Context | 1 request | 2 requests | 4 requests | 8 requests | 16 requests |
+|:--|--:|--:|--:|--:|--:|
+| 0 | 28.6 | 56.2 | 110.0 | 211.0 | 389.5 |
+| 8K | 28.1 | 55.2 | 106.2 | 197.9 | 357.6 |
+| 32K | 27.1 | 52.1 | 96.5* | 176.9 | 287.0 |
+| 64K | 26.0 | 49.5* | 91.3 | 159.1* | — |
+| 128K | 24.0 | 45.1 | 79.3* | — | — |
+| 200K | 22.7 | 40.3 | 67.7* | — | — |
+
+[Full results](https://b65.thekaiser.us/matrices/cmvferlun010nrf01qrp1bx35/)
+
+These are throughput measurements, not model-quality scores. Engine versions differ between configurations. Starred results include queueing and should not be interpreted as fully sustained requested concurrency.",results,pre-labelled; checked
+"New TTS king in town: Fish's Drama 3 35B3A!
+
+Yesterday Fish released this incredible text-to-speech model, so naturally I spent the rest of the day building a great demo for them :D The model is a chunky MoE (35B3A), but it runs well on a DGX Spark. The 4bit quants get very close to the original. You can try it here: [https://huggingface.co/spaces/fishaudio/Drama-3](https://huggingface.co/spaces/fishaudio/Drama-3) or download the model and run it locally 🤗",announcement,pre-labelled; checked
