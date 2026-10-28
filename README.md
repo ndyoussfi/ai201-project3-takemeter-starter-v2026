@@ -285,11 +285,11 @@ Device: `mps` (Intel Mac, AMD GPU), torch 2.2.2. The test split is 23 posts on e
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Overall accuracy | ≥ 0.80 | MISSED | 0.522 on all three seeds, which is exactly the `announcement` share of the test split (12/23) |
+| 2 | Recall for `results` | ≥ 0.75 | MISSED | 0.000 on all three seeds; none of the 7 `results` test posts was labelled `results` |
+| 3 | Confidence gap | ≥ 0.30 | MISSED | 0.286, 0.286, 0.429. It has to hold on every seed, and two of three fall short |
+| 4 | Balance in `labels.csv` | no label > 65% or < 15% | MET | 51.3% / 30.7% / 18.0%, checked on the file itself, so the same on every seed |
+| 5 | Precision for `results` | ≥ 0.83 | MISSED | the model never predicted `results` on any seed, so precision is undefined (scored 0.000). A target that can't be reached at all is a miss |
 
 **Diagnoses**
 
@@ -302,7 +302,21 @@ Device: `mps` (Intel Mac, AMD GPU), torch 2.2.2. The test split is 23 posts on e
      have that can tell a LABELLING problem from a MODEL problem, and this
      section is graded on whether you used it that way. -->
 
+**Criteria 1, 2 and 5: one cause, a model that collapsed to the majority label.** On all three seeds the model predicted `announcement` for every test post (the confusion matrix is a single column), so accuracy equals the `announcement` share and `results` gets zero recall and no predictions at all. This is mainly a **model / data-size problem**, and I can tell it apart from a labelling problem with three pieces of evidence:
 
+- **Training never moved.** Validation accuracy was 0.522 and macro F1 0.229 after epoch 1, 2 and 3 alike, and training loss only fell from 1.03 to 0.96. With 104 training posts at batch 16 for 3 epochs, the model got 21 small updates. The cheapest answer it found was "always the 51% label", and it never got past it.
+- **The task is reachable without my training.** The bare-names baseline, with no training at all, scored 0.565 accuracy and 0.667 F1 on `results` on the same 23 posts. So the texts do carry the distinction; my fine-tune just didn't learn it from this much data.
+- **The collapse is the same on every split.** If one boundary were fuzzy, I'd expect a mix of right and wrong answers that changed between seeds. Instead all three seeds give the identical one-column matrix, which points at training, not at particular posts.
+
+**My labels probably made it worse, and the agreement report is the evidence.** On the staff set I labelled only 3 of 30 posts `analysis` against staff's 10, and 7 of my 8 misses there were `analysis` called `hot_take` or `reaction`: I under-call the fact-backed label when a post states a confident conclusion. My `results` vs `announcement` boundary is the same judgement (does the fact carry the poster's conclusion?), so I likely labelled some fact-backed posts `announcement`. That would add to the `announcement` majority and blur the `results` examples the model did see. I can't confirm it from the matrix, because a model that never predicts `results` can't show which `results` posts it confused, but it's the most likely labelling contribution.
+
+Two smaller factors: `help` and `results` have only 4 and 7 test posts, so even a working model's scores would jump by 0.14–0.25 per post; and the model reads only the first 128 tokens (about 500 characters) of posts with a median of about 1,000, so in long posts the measurements that make something `results` can sit past the cutoff.
+
+**Criterion 3: a near miss on a tiny sample.** With 23 test posts, each third holds 7 posts, so one post moves the gap by about 0.14. The gaps of 0.286, 0.286 and 0.429 are 2, 2 and 3 posts. My reason for the target assumed about 10 posts per third; the real number is 7, which makes 0.30 a 2-to-3-post target. Even so, there is a real signal here: the model's most-confident third was 5 of 7 `announcement` posts against 2–3 of 7 in its least-confident third, so its confidence leans toward real announcements even though its answers never change. The cause of the miss is the same collapse plus a test set too small for thirds to be stable.
+
+**Criterion 4 (MET):** met because I stopped labelling at a balance I'd planned for, not because of anything the model did.
+
+**No criteria revised.** All five could be measured; criterion 5 is undefined only because of the collapse, not because it was badly written. Lowering any target after missing it isn't a revision.
 
 ---
 
