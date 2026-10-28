@@ -261,13 +261,13 @@ Two labels have fewer than about 8 in the test split: `results` has 7 and `help`
 <!-- ⚠️ TYPED AS A MARKDOWN TABLE. The notebook prints one ready to paste.
      An image of a matrix earns nothing. -->
 
-| true \ predicted |  |  |  |
+| true \ predicted | announcement | results | help |
 |---|---|---|---|
-| **** |  |  |  |
-| **** |  |  |  |
-| **** |  |  |  |
+| **announcement** | 12 | 0 | 0 |
+| **results** | 7 | 0 | 0 |
+| **help** | 4 | 0 | 0 |
 
-**My biggest off-diagonal number, and what it means:**
+**My biggest off-diagonal number, and what it means:** 7 real `results` posts were called `announcement`, and 0 went the other way; all 4 `help` posts were called `announcement` too. That looks like the lopsided pattern the slides describe, but it isn't one fuzzy boundary: the model never predicts `results` or `help` at all, on any seed. It collapsed to the majority label, so the matrix can't tell me yet whether it also failed my hardest boundary (`announcement` vs `results`). That's a training problem first (104 posts, 21 steps, validation accuracy flat at 0.522 from epoch 1), and the agreement check is what will show whether my labels added to it.
 <!-- Not "the model made mistakes" — WHICH boundary it didn't learn, and which
      direction. "7 real analysis posts were called hot_take and only 3 went the
      other way" is a direction, not just an error rate. -->
