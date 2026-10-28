@@ -207,6 +207,14 @@ Two labels have fewer than about 8 in the test split: `results` has 7 and `help`
 
 **Pre-labelling disclosure:** Claude pre-labelled 271 posts from my definitions, decision rule and skip rule. I read and reviewed 138 of them one at a time. The 133 I never reviewed are excluded from `labels.csv` (they're in `data/unreviewed.csv`). The 20 `cold` rows had no AI involvement.
 
+**Moment 3 (unit 6)**
+
+- *What I asked for:* After the baseline did worse with my definitions (0.348 accuracy) than with bare label names (0.565), I asked Claude why.
+- *What came back:* My `announcement` definition is written as a negation ("without the poster making their own argument backed by checkable facts") and reuses the same words as `results`, so a model judging which definition a post matches couldn't tell the two apart; `announcement` F1 fell from 0.471 to 0.000.
+- *What I changed:* Nothing in the taxonomy, since unit 6 doesn't allow it, but I wrote it up in Baseline vs. Trained as a finding: my decision rule makes the line clear to a person, but the definition alone doesn't.
+
+**Unit 6 AI help, for completeness:** Claude wrote `staff_label.py`. After I'd labelled the 30 staff posts and before I had the staff labels, it told me how often my labels matched its own reading (16 of 30) and what kinds of disagreements we had; my labels in `my_staff_labels.csv` are my own first pass, unchanged. For each disagreement with staff it laid out the case for both labels from the staff rules; the pile for each was my call. It also recommended the epochs change from my diagnosis and drafted most of the unit 6 README text from my results and decisions.
+
 **Other AI help, for completeness:** Claude helped me write `collect.py` and `label.py`, diagnosed the NumPy/pyarrow conflict on my Intel Mac, and drafted some of this README's text from my decisions, which I wrote. The labels, the decision rule, the skip rule and all five criteria targets are mine.
 
 <!-- ═══════════════════════ UNIT 6 — THE TEST ═══════════════════════
@@ -484,24 +492,46 @@ This is direct evidence about my own 150 labels. My `announcement` vs `results` 
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** One training setting: `EPOCHS` from 3 to 10, which takes the model from 21 to 70 weight updates. Everything else stayed the same: the same 150 labels, the same seeds (42, 7, 2024) and so the same splits, learning rate 2e-5, batch size 16, 128 tokens, device `mps`. `RUN_LABEL` was set to `"after"`, so the before file wasn't overwritten.
 
-**Which diagnosis pointed at it:**
+**Which diagnosis pointed at it:** Criteria 1, 2 and 5 all missed because the model collapsed to `announcement`. Validation accuracy didn't move between epochs 1 and 3, training loss barely fell, and the bare-names baseline showed the task is reachable without training. That points at too little training, not at a single boundary, and it's the one case where the brief says to change a training setting. The agreement report suggests my labels add to the problem too, but relabelling first would have meant changing two things at once.
 
 ### Run Log — After
 
 | Criterion | Target | Seed 42 | Seed 7 | Seed 2024 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. Overall accuracy | ≥ 0.80 | 0.696 | 0.696 | 0.739 | MISSED |
+| 2. Recall for `results` | ≥ 0.75 | 0.571 | 0.429 | 0.714 | MISSED |
+| 3. Confidence gap (most-confident third minus least-confident third) | ≥ 0.30 | 0.000 | 0.571 | 0.429 | MISSED |
+| 4. Balance in `labels.csv` (no label > 65% or < 15%) | max ≤ 65%, min ≥ 15% | 51.3% / 18.0% | 51.3% / 18.0% | 51.3% / 18.0% | MET |
+| 5. Precision for `results` | ≥ 0.83 | 0.800 | 0.600 | 0.625 | MISSED |
+
+| Measure | Seed 42 | Seed 7 | Seed 2024 | Spread |
+|---|---|---|---|---|
+| Overall accuracy | 0.696 | 0.696 | 0.739 | 0.043 |
+| Macro F1 | 0.608 | 0.576 | 0.638 | 0.062 |
+| F1 — `announcement` | 0.759 | 0.828 | 0.846 | 0.087 |
+| F1 — `results` | 0.667 | 0.500 | 0.667 | 0.167 |
+| F1 — `help` | 0.400 | 0.400 | 0.400 | 0.000 |
+
+Confusion matrix after, seed 42 (seeds 7 and 2024 in `results_three_seeds_after.json`):
+
+| true \ predicted | announcement | results | help |
+|---|---|---|---|
+| **announcement** | 11 | 1 | 0 |
+| **results** | 3 | 4 | 0 |
+| **help** | 3 | 0 | 1 |
+
+Summed over all three seeds: 9 real `results` posts were called `announcement` and only 2 went the other way; `help` was right 3 times out of 12, with its misses split 5 to `announcement` and 4 to `results`.
 
 **Did it help, and how do I know:**
 
 <!-- If it didn't, say so. Relabelling that didn't help is a genuinely
      interesting result and earns full credit. -->
+
+Yes, a lot, though it still misses four of five criteria. On every seed accuracy rose by 0.17 to 0.22 (0.522 → 0.696–0.739) and macro F1 more than doubled (0.229 → 0.576–0.638). More important, the model now predicts all three labels: `results` went from zero recall to 0.43–0.71, and `help` from 0.00 F1 to 0.40. It now beats the bare-names baseline on accuracy (0.696–0.739 vs 0.565) and macro F1 (0.576–0.638 vs 0.561). It matches it on `results` F1 (up to 0.667) and still trails it on `help` (0.400 vs 0.545). Accuracy only moved 0.043 across seeds, so those numbers are fairly stable; the confidence gap is not (0.000 to 0.571), because each third is only 7 posts.
+
+Now that the model makes real choices, the matrix shows a direction the collapse hid: `results` is confused with `announcement` far more in one direction (9 vs 2). That's my hardest boundary, and it leans the same way as my staff-set habit of under-calling the fact-backed label.
 
 
 
@@ -511,11 +541,18 @@ This is direct evidence about my own 150 labels. My `announcement` vs `results` 
 
 <!-- For each criterion still missed: what you'd do, and why you stopped. -->
 
+- **1. Accuracy (0.696–0.739 vs 0.80).** Most remaining errors are `results` → `announcement` and `help` → anything. I'd re-check every `announcement` row in `labels.csv` that contains measurements, applying my decision rule strictly, since the staff set showed I under-call the fact-backed label. I stopped because the brief allows one change this unit, and I was out of time.
+- **2. `results` recall (0.43–0.71 vs 0.75).** Same boundary. Besides relabelling, I'd raise `MAX_LENGTH` from 128 to 256 tokens, because many of my posts are about 1,000 characters and the measurements often come after the first 500. That's a second change, so I didn't make it.
+- **3. Confidence gap (0.000, 0.571, 0.429 vs 0.30).** With 23 test posts each third is 7, so one post moves the gap by about 0.14. The fix is more data: reviewing the 133 pre-labelled posts in `data/unreviewed.csv` would take me past 250 rows and roughly 40 test posts. I stopped at 150 for time in unit 5.
+- **5. `results` precision (0.60–0.80 vs 0.83).** The false `results` calls are mostly `help` posts (4 across seeds), which contain specs and measured numbers too. `help` is my thinnest label (27 rows), so I'd add 30 more `help` posts, including ones with numbers. I stopped for time.
+
 
 
 **The gap between what I meant my labels to capture and what the model
 learned:**
 <!-- Two sentences. Your confusion matrix is the evidence. -->
+
+I meant `results` to capture posts where checkable facts carry the poster's own conclusion, but the model seems to have learned something closer to "posts with measurements in them", which is why `help` posts full of specs and tok/s numbers get called `results` (4 across seeds). It also misses `results` posts that open like a release (9 called `announcement`), which suggests it reads the opening tone of a post more than what its facts are doing, and with only the first 128 tokens it often can't see those facts at all.
 
 
 
