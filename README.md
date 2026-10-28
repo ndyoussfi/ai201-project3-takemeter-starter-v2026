@@ -223,16 +223,19 @@ Two labels have fewer than about 8 in the test split: `results` has 7 and `help`
 
 | Measure | Baseline | Trained | Difference |
 |---|---|---|---|
-| Overall accuracy |  |  |  |
-| Macro F1 |  |  |  |
-| F1 — `label_one` |  |  |  |
-| F1 — `label_two` |  |  |  |
+| Overall accuracy | 0.348 | 0.522 | +0.174 |
+| Macro F1 | 0.278 | 0.229 | -0.049 |
+| F1 — `announcement` | 0.000 | 0.686 | +0.686 |
+| F1 — `help` | 0.333 | 0.000 | -0.333 |
+| F1 — `results` | 0.500 | 0.000 | -0.500 |
 
-**What I predicted before I looked:**
+**Bare-names baseline** (`python baseline.py --definitions no_such_file.txt --out baseline_results_bare.json`, same 23 posts): accuracy 0.565, macro F1 0.561, F1 `announcement` 0.471, `help` 0.545, `results` 0.667. The table above uses my definitions, as the brief asks.
+
+**What I predicted before I looked:**  I'd already seen my seed-42 results in unit 5, so this isn't a blind prediction. I expect the trained model to beat the baseline on overall accuracy and announcement F1, because it guesses `announcement` for nearly everything, and to lose on Macro F1, help and results, because it never predicts the smaller labels.
 <!-- Milestone 1 asks you to write this BEFORE seeing the trained numbers. A
      prediction made afterwards isn't one. -->
 
-**What the gap actually means:**
+**What the gap actually means:** The trained model beats the baseline only on overall accuracy and `announcement` F1, and only because it predicts `announcement` for almost every post. It scores 0 on `results` and `help`, so fine-tuning on 104 posts for 21 steps added nothing beyond guessing the majority label. My definitions also made the baseline worse: with bare label names it scored 0.565 accuracy and 0.561 macro F1 instead of 0.348 and 0.278, which beats my trained model on everything except `announcement` F1. The likely reason is that my `announcement` definition is written as a negation ("without the poster making their own argument backed by checkable facts") using the same words as `results`, so BART couldn't tell the two apart and `announcement` F1 fell to 0. My decision rule makes the line clear to a person, but the definition alone doesn't.
 <!-- If the baseline matched your trained model, your fine-tuning added
      nothing — and that is a real finding, not a failure. Say it plainly. -->
 
